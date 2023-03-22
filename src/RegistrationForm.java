@@ -5,6 +5,7 @@ import java.awt.event.ActionListener;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.Statement;
+import java.util.regex.Pattern;
 
 public class RegistrationForm extends JDialog {
     private JTextField txtEmail;
@@ -51,10 +52,10 @@ public class RegistrationForm extends JDialog {
          String phone = txtPhone.getText();
          String address = txtAddress.getText();
          String password = String.valueOf(pwdtxtPassword.getPassword());
-         String Confirmpassword = String.valueOf(pwdtxtConfirmpassword.getPassword());
+         String ConfirmPassword = String.valueOf(pwdtxtConfirmpassword.getPassword());
 
 
-        if(name.isEmpty() || email.isEmpty() || phone.isEmpty() || address.isEmpty() || password.isEmpty() || Confirmpassword.isEmpty()){
+        if(name.isEmpty() || email.isEmpty() || phone.isEmpty() || address.isEmpty() || password.isEmpty() || ConfirmPassword.isEmpty()){
             JOptionPane.showMessageDialog(this,
                     "Please fill all fields",
                     "Try again" ,
@@ -63,7 +64,16 @@ public class RegistrationForm extends JDialog {
 
         }
 
-        if(!password.equals(Confirmpassword)){
+        if(!isValidEmail(email)){
+            JOptionPane.showMessageDialog(this,
+                    "Email is Invalid",
+                    "Email invalid" ,
+                    JOptionPane.ERROR_MESSAGE);
+
+            return;
+        }
+
+        if(!password.equals(ConfirmPassword)){
             JOptionPane.showMessageDialog(this,
                     "Password does not match",
                     "Try again" ,
@@ -118,6 +128,15 @@ return;
 
         return user;
     }
+
+    public boolean isValidEmail(String email){
+        String pattern = "^(.+)@(.+)$";
+
+        return Pattern.compile(pattern)
+                .matcher(email)
+                .matches();
+    }
+
     public static void main(String[] args) {
         RegistrationForm myForm = new RegistrationForm(null);
         User user = myForm.user;

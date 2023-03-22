@@ -1,2 +1,8 @@
-package PACKAGE_NAME;public class HomePage {
+import javax.swing.*;
+
+public class HomePage {
+
+    private void createUIComponents() {
+        // TODO: place custom component creation code here
+    }
 }
