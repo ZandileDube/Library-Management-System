@@ -1,3 +1,10 @@
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.time.LocalDate;
+import java.util.Date;
+
 public class Book {
 
    private String  title;
@@ -82,6 +89,38 @@ private StatusType status;
         }
     }
 
+    //method that returns a duedate of a book
+       public LocalDate showDueDt(){
+        LocalDate date = LocalDate.now();
+        LocalDate dueDate = date.plusWeeks(2);
+        return dueDate;
+       }
+
+    //method that checks the Reservation status of a specific book
+    public String Reservation_status(String title){
+        String status = null;
+        try {
+            Connection conn = DBConnection.getConnection();
+            String sql = "Select statusType from books where title = ?";
+            PreparedStatement preparedStatement = conn.prepareStatement(sql);
+            preparedStatement.setString(1,title);
+            preparedStatement.execute();
+            ResultSet resultSet = preparedStatement.executeQuery();
+            if (resultSet.next()) {
+                status = resultSet.getString("statusType");
+            }
+            resultSet.close();
+            preparedStatement.close();
+            conn.close();
+        }catch (SQLException e){
+
+            e.printStackTrace();
+        }
+
+
+
+return status;
+    }
 
 
 
