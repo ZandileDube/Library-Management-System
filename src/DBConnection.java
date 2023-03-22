@@ -11,10 +11,7 @@ public class DBConnection {
         try{
 
             //establish connection
-            con = DriverManager.getConnection("jdbc:mysql://localhost:3306/library_ms", "root", "");
-
-
-
+            con = DriverManager.getConnection("jdbc:mysql://localhost:3306/library_management_system", "root", "");
 
         }catch (Exception e) {
             e.printStackTrace();

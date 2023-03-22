@@ -1,2 +1,2 @@
-package PACKAGE_NAME;public class Library_Management_System {
+public class Library_Management_System {
 }
