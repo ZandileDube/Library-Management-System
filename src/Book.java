@@ -1,4 +1,5 @@
 public class Book {
+
    private String  title;
     private String author;
     private String isbn;
@@ -80,6 +81,8 @@ private StatusType status;
             throw new IllegalArgumentException("Status is missing or falsy");
         }
     }
+
+
 
 
 
