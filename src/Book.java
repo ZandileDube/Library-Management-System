@@ -1,9 +1,5 @@
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
 import java.time.LocalDate;
-import java.util.Date;
 
 public class Book {
 
@@ -97,17 +93,19 @@ private StatusType status;
        }
 
     //method that checks the Reservation status of a specific book
-    public String Reservation_status(String title){
-        String status = null;
+    public String[] Reservation_status(String title){
+        String [] result = null;
         try {
             Connection conn = DBConnection.getConnection();
-            String sql = "Select statusType from books where title = ?";
+            String sql = "Select statusType, bookID from books where title = ?";
             PreparedStatement preparedStatement = conn.prepareStatement(sql);
             preparedStatement.setString(1,title);
             preparedStatement.execute();
             ResultSet resultSet = preparedStatement.executeQuery();
             if (resultSet.next()) {
-                status = resultSet.getString("statusType");
+                String status = resultSet.getString("statusType");
+                String bookID = resultSet.getString("bookID");
+                result= new String[]{status, bookID};
             }
             resultSet.close();
             preparedStatement.close();
@@ -116,10 +114,40 @@ private StatusType status;
 
             e.printStackTrace();
         }
+         return result;
+    }
+
+    public boolean Borrow_book(String title, String userID){
+//this won't work fix it babe , well figure out why you think it won't work
+        try{
+
+            if (Reservation_status(title).equals("AVAILABLE")){
+                String[] result = Reservation_status(title);
+                Connection conn = DBConnection.getConnection();
+                LocalDate dueDate = showDueDt();
+                LocalDate dateborrowed = LocalDate.now();
+                String sql = "BEGIN TRANSACTION\n" +
+                        "INSERT INTO LOGS (userID, bookID, dateborrowed, duedate)\n" +
+                        "values (?,?,?,?)\n" +
+                        "UPDATE books SET statusType=\"BORROWED\" where bookID=?\n" +
+                        "COMMIT ";
+                PreparedStatement preparedStatement = conn.prepareStatement(sql);
+                preparedStatement.setString(1,userID);
+                preparedStatement.setString(2,result[2]);
+                preparedStatement.setDate(3, Date.valueOf(dateborrowed));
+                preparedStatement.setDate(4,Date.valueOf(dueDate));
+                preparedStatement.setString(5,result[2]);
+                return true;
+            };
+                return true;
 
 
+        }catch (SQLException e) {
 
-return status;
+            e.printStackTrace();
+            return false;
+        }
+
     }
 
 
