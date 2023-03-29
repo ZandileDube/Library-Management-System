@@ -92,20 +92,31 @@ private StatusType status;
         return dueDate;
        }
 
-    //method that checks the Reservation status of a specific book
-    public String[] Reservation_status(String title){
-        String [] result = null;
+    //method used to check the reservation status of a book
+    public String Reservation_status(String title, String userID){
+        String status = null;
         try {
             Connection conn = DBConnection.getConnection();
-            String sql = "Select statusType, bookID from books where title = ?";
+            String sql = "Select bookID, statusType from books where title = ? ";
             PreparedStatement preparedStatement = conn.prepareStatement(sql);
             preparedStatement.setString(1,title);
             preparedStatement.execute();
             ResultSet resultSet = preparedStatement.executeQuery();
+
             if (resultSet.next()) {
-                String status = resultSet.getString("statusType");
-                String bookID = resultSet.getString("bookID");
-                result= new String[]{status, bookID};
+                if (resultSet.getString(2).equals("AVAILABLE")){
+                return "book available";
+                } else if (resultSet.getString(2).equals("BORROWED")) {
+                return "book borrowed";
+                } else if (resultSet.getString(2).equals("RESERVED")) {
+                    if (resultSet.getString(1).equals(userID)){
+                        return "book reserved by you";
+
+                    } else  {
+                        return "book reserved";
+                    }
+
+                }
             }
             resultSet.close();
             preparedStatement.close();
@@ -114,15 +125,38 @@ private StatusType status;
 
             e.printStackTrace();
         }
-         return result;
+
+    }
+
+    public String reservedBy(String bookID){
+
+        try{
+            Connection conn = DBConnection.getConnection();
+            String sql = "Select userID  from logs bookID = ? ";
+            PreparedStatement preparedStatement = conn.prepareStatement(sql);
+            preparedStatement.setString(1, bookID);
+            preparedStatement.execute();
+            ResultSet resultSet = preparedStatement.executeQuery();
+            String userID=resultSet.getString(1);
+            return userID;
+
+
+        }catch (SQLException e){
+            e.printStackTrace();
+        }
+
+
+
+
+
     }
 
     public boolean Borrow_book(String title, String userID){
 //this won't work fix it babe , well figure out why you think it won't work
+
         try{
 
             if (Reservation_status(title).equals("AVAILABLE")){
-                String[] result = Reservation_status(title);
                 Connection conn = DBConnection.getConnection();
                 LocalDate dueDate = showDueDt();
                 LocalDate dateborrowed = LocalDate.now();
