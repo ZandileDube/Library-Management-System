@@ -13,6 +13,8 @@ private StatusType status;
         AVAILABLE,
         BORROWED
     };
+    LocalDate date = LocalDate.now();
+    String sql;
 
 
    //getters and setters
@@ -87,102 +89,190 @@ private StatusType status;
 
     //method that returns a duedate of a book
        public LocalDate showDueDt(){
-        LocalDate date = LocalDate.now();
+
         LocalDate dueDate = date.plusWeeks(2);
         return dueDate;
        }
 
     //method used to check the reservation status of a book
     public String Reservation_status(String title, String userID){
-        String status = null;
+        String reservationStatus  = null;
         try {
             Connection conn = DBConnection.getConnection();
             String sql = "Select bookID, statusType from books where title = ? ";
             PreparedStatement preparedStatement = conn.prepareStatement(sql);
             preparedStatement.setString(1,title);
-            preparedStatement.execute();
             ResultSet resultSet = preparedStatement.executeQuery();
 
             if (resultSet.next()) {
-                if (resultSet.getString(2).equals("AVAILABLE")){
-                return "book available";
-                } else if (resultSet.getString(2).equals("BORROWED")) {
-                return "book borrowed";
-                } else if (resultSet.getString(2).equals("RESERVED")) {
-                    if (resultSet.getString(1).equals(userID)){
-                        return "book reserved by you";
+                if (resultSet.getString(2).equals("AVAILABLE")) {
+                    String bookID=resultSet.getString(1);
+                    reservationStatus="available";
 
-                    } else  {
-                        return "book reserved";
+                } else if (resultSet.getString(2).equals("BORROWED")) {
+                    reservationStatus= "book borrowed";
+
+                } else if (resultSet.getString(2).equals("RESERVED")) {
+                    if (userID.equals(reservedBy(resultSet.getString(1)))) {
+                        reservationStatus= "book reserved by you";
+
+                    } else {
+                        reservationStatus= "book reserved";
                     }
 
                 }
+
+            }
+            resultSet.close();
+            preparedStatement.close();
+            conn.close();
+
+        }catch (SQLException e){
+            e.printStackTrace();
+
+        }
+
+        return reservationStatus;
+    }
+
+    public String reservedBy(String bookID){
+
+        String userID =null;
+        try{
+            Connection conn = DBConnection.getConnection();
+            String sql = "SELECT userID  FROM logs WHERE bookID = ? ";
+            PreparedStatement preparedStatement = conn.prepareStatement(sql);
+            preparedStatement.setString(1, bookID);
+            ResultSet resultSet = preparedStatement.executeQuery();
+            if (resultSet.next()) {
+                userID = resultSet.getString(1);
             }
             resultSet.close();
             preparedStatement.close();
             conn.close();
         }catch (SQLException e){
-
             e.printStackTrace();
+
         }
 
+        return userID;
     }
-
-    public String reservedBy(String bookID){
+public boolean Borrow_book(String title, String userID){
 
         try{
-            Connection conn = DBConnection.getConnection();
-            String sql = "Select userID  from logs bookID = ? ";
-            PreparedStatement preparedStatement = conn.prepareStatement(sql);
-            preparedStatement.setString(1, bookID);
-            preparedStatement.execute();
-            ResultSet resultSet = preparedStatement.executeQuery();
-            String userID=resultSet.getString(1);
-            return userID;
+            if (Reservation_status(title,userID).equals("book available")){
+                Connection conn = DBConnection.getConnection();
+                LocalDate dueDate = showDueDt();
+                String sql = "BEGIN TRANSACTION\n" +
+                        "INSERT INTO logs (userID, bookID, dateborrowed, duedate)\n" +
+                        "VALUES (?,(SElECT bookID FROM books WHERE title = ? AND statusType = 'AVAILABLE'),?,?)\n" +
+                        "UPDATE books SET statusType= 'BORROWED' WHERE bookID= (SELECT bookID FROM books WHERE title = ? AND statusType = 'AVAILABLE')\n" +
+                        "COMMIT ";
+                PreparedStatement preparedStatement = conn.prepareStatement(sql);
+                preparedStatement.setString(1,userID);
+                preparedStatement.setString(2,title);
+                preparedStatement.setDate(3, Date.valueOf(date));
+                preparedStatement.setDate(4,Date.valueOf(dueDate));
+                preparedStatement.setString(5,title);
+                return true;
+            }
+
+        }catch (SQLException e) {
+            e.printStackTrace();
+        }
+    return false;
+    }
+
+public String Reserve_book(String title, String userID){
+        String status = Reservation_status(title,userID);
+        String result = null;
+        try{
+            if (status.equals("available")){
+                Connection conn = DBConnection.getConnection();
+                String sql =  "BEGIN TRANSACTION\n" +
+                        "INSERT INTO LOGS (userID, bookID, dateReserved)\n" +
+                        "VALUES (?,(SELECT bookID FROM books WHERE title = ? AND statusType = 'AVAILABLE'),?)\n" +
+                        "UPDATE books SET statusType='RESERVED' WHERE bookID=(SELECT bookID FROM books WHERE title = ? AND statusType = 'AVAILABLE')\n" +
+                        "COMMIT ";
+                PreparedStatement preparedStatement = conn.prepareStatement(sql);
+                preparedStatement.setString(1,userID);
+                preparedStatement.setString(2,title);
+                preparedStatement.setDate(3, Date.valueOf(date));
+                preparedStatement.setString(4,title);
+                int updateCount = preparedStatement.executeUpdate();
+                if (updateCount > 0){
+                     result= "Reserved successfully";
+                } else {
+                    throw new RuntimeException("Failed to reserve book ");
+                }
+
+
+            }else if (status.equals("book reserved by you")){
+                result="Reserved by you";
+
+            }else {
+
+                result="Not available for reservation";
+            }
 
 
         }catch (SQLException e){
             e.printStackTrace();
         }
+    return result;
+}
 
-
-
-
-
-    }
-
-    public boolean Borrow_book(String title, String userID){
-//this won't work fix it babe , well figure out why you think it won't work
-
+public String Return_book(String userID, String bookID){
+    String result=null;
         try{
+            Connection conn = DBConnection.getConnection();
+            sql = "UPDATE logs, books\n" +
+                    "SET logs.dateReturned = ? , books.statusType = ?\n" +
+                    "FROM logs \n" +
+                    "INNER JOIN books ON logs.bookID = books.bookID \n" +
+                    "WHERE logs.bookID =? ";
+            PreparedStatement preparedStatement = conn.prepareStatement(sql);
+            preparedStatement.setDate(1, Date.valueOf(date));
+            preparedStatement.setString(2, String.valueOf(StatusType.AVAILABLE));
+            preparedStatement.setString(3, bookID);
 
-            if (Reservation_status(title).equals("AVAILABLE")){
-                Connection conn = DBConnection.getConnection();
-                LocalDate dueDate = showDueDt();
-                LocalDate dateborrowed = LocalDate.now();
-                String sql = "BEGIN TRANSACTION\n" +
-                        "INSERT INTO LOGS (userID, bookID, dateborrowed, duedate)\n" +
-                        "values (?,?,?,?)\n" +
-                        "UPDATE books SET statusType=\"BORROWED\" where bookID=?\n" +
-                        "COMMIT ";
-                PreparedStatement preparedStatement = conn.prepareStatement(sql);
-                preparedStatement.setString(1,userID);
-                preparedStatement.setString(2,result[2]);
-                preparedStatement.setDate(3, Date.valueOf(dateborrowed));
-                preparedStatement.setDate(4,Date.valueOf(dueDate));
-                preparedStatement.setString(5,result[2]);
-                return true;
-            };
-                return true;
-
-
-        }catch (SQLException e) {
-
+            result ="Book returned";
+            }catch (SQLException e) {
             e.printStackTrace();
-            return false;
         }
+    return result;
+}
 
+    public String display_Book(String title){
+        String result = "";
+        try {
+            Connection conn = DBConnection.getConnection();
+            String sql = "SELECT * FROM books WHERE title=?";
+            PreparedStatement preparedStatement = conn.prepareStatement(sql);
+            preparedStatement.setString(1, title);
+            ResultSet resultSet = preparedStatement.executeQuery();
+            if (resultSet.next()) {
+                Book book = new Book(
+                        resultSet.getString("title"),
+                        resultSet.getString("author"),
+                        resultSet.getString("publication"),
+                        resultSet.getString("isbn"),
+                        Book.StatusType.AVAILABLE
+                );
+                result = "Title: " + book.getTitle() + "\n"
+                        + "Author: " + book.getAuthor() + "\n"
+                        + "Publication: " + book.getPublication() + "\n"
+                        + "ISBN: " + book.getIsbn() + "\n";
+            } else {
+                result = "Book not found.";
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return result;
     }
+
+
 
 
 
